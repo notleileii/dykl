@@ -53,7 +53,7 @@
 <script>
   const RATE = 100; // points per $1
   const $ = id => document.getElementById(id);
-
+ 
   function render(d, fresh){
     $('correct').textContent = `${d.correct} / ${d.total}`;
     $('pts').textContent = d.pts;
@@ -63,7 +63,7 @@
     $('got').style.display = 'block';
     if (fresh) $('banner').classList.add('show');
   }
-
+ 
   function load(){
     const p = new URLSearchParams(location.search);
     if (p.has('pts')){
@@ -77,7 +77,7 @@
     $('none').style.display = 'block';
   }
   load();
-
+ 
   // If this page is already open in another tab, update live
   try {
     new BroadcastChannel('loveyy').onmessage = e => render(e.data, true);
