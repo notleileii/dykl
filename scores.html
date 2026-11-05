@@ -195,9 +195,29 @@
     $(id).classList.add('active');
   };
 
-  $('playBtn').onclick = () => { playerName = $('nameInput').value.trim() || 'Anonymous loveyy'; index = 0; score = 0; correctCount = 0; entryId = Date.now();
-    saveEntry({ id: entryId, name: playerName, score: 0, correct: 0, total: questions.length, current: 1, status: 'playing', converted: false, time: entryId });
-    show('quiz'); renderQuestion(); };
+  // Send the name to the scoreboard as soon as it's typed
+  $('nameInput').addEventListener('input', () => {
+    const v = $('nameInput').value.trim();
+    if (!entryId){
+      if (!v) return;
+      entryId = Date.now();
+      saveEntry({ id: entryId, name: v, score: 0, correct: 0, total: questions.length, current: 0, answered: 0, status: 'name', converted: false, time: entryId });
+    } else {
+      updateEntry({ name: v || 'Anonymous loveyy' });
+    }
+  });
+
+  $('playBtn').onclick = () => {
+    playerName = $('nameInput').value.trim() || 'Anonymous loveyy';
+    index = 0; score = 0; correctCount = 0;
+    if (!entryId){
+      entryId = Date.now();
+      saveEntry({ id: entryId, name: playerName, score: 0, correct: 0, total: questions.length, current: 1, answered: 0, status: 'playing', converted: false, time: entryId });
+    } else {
+      updateEntry({ name: playerName, score: 0, correct: 0, current: 1, answered: 0, status: 'playing' });
+    }
+    show('quiz'); renderQuestion();
+  };
 
   function renderQuestion(){
     const item = questions[index];
@@ -241,7 +261,7 @@
       msg.innerHTML = `The actual answer is ${ans}, but since you are pretty as heck, I'll let it slide hehe 💕${earned}`;
     }
     $('liveScore').textContent = `${score} pts`;
-    updateEntry({ score, correct: correctCount });
+    updateEntry({ score, correct: correctCount, answered: index + 1 });
     msg.classList.add('show');
     $('next').classList.add('show');
     $('nextBtn').focus();
@@ -363,8 +383,8 @@
     list.forEach((e, i) => {
       const tr = document.createElement('tr');
       const playing = e.status === 'playing';
-      const label = e.converted ? 'Converted' : playing ? `Playing · Q${e.current || 1}/${e.total}` : 'Finished';
-      const cls = e.converted ? 'yes' : playing ? 'live' : '';
+      const label = e.converted ? 'Converted' : e.status === 'name' ? 'Entered name' : playing ? `Answered ${e.answered || 0}/${e.total}` : 'Finished';
+      const cls = e.converted ? 'yes' : (playing || e.status === 'name') ? 'live' : '';
       const when = new Date(e.time).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
       [i === 0 ? '👑' : i+1, e.name, `${e.correct} / ${e.total}`, e.score, null, when].forEach((v, j) => {
         const td = document.createElement('td');
