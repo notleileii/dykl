@@ -40,6 +40,7 @@
 <main class="card">
   <h1>Scoreboard</h1>
   <p class="sub">Who answered the quiz</p>
+  <p class="sub" id="mode" style="margin-top:-12px;font-size:.85rem"></p>
   <div class="stats">
     <div class="stat"><b id="sPlayers">0</b><span>Players</span></div>
     <div class="stat"><b id="sBest">0</b><span>Best score</span></div>
@@ -59,10 +60,26 @@
 </main>
 <script>
   const $ = id => document.getElementById(id);
-  const read = () => { try { return JSON.parse(localStorage.getItem('loveyyScores')) || []; } catch(e){ return []; } };
- 
-  function render(){
-    const list = read().sort((a,b) => b.score - a.score || a.time - b.time);
+  // Same Firebase Realtime Database URL as in dykl.html ('' = this browser only)
+  const FIREBASE_URL = '';
+
+  const readLocal = () => { try { return JSON.parse(localStorage.getItem('loveyyScores')) || []; } catch(e){ return []; } };
+
+  async function getList(){
+    if (FIREBASE_URL){
+      try {
+        const r = await fetch(`${FIREBASE_URL}/scores.json`, { cache: 'no-store' });
+        const data = await r.json();
+        $('mode').textContent = 'Live from all devices';
+        return data ? Object.values(data) : [];
+      } catch(e){ $('mode').textContent = 'Cannot reach the online database. Check FIREBASE_URL.'; return []; }
+    }
+    $('mode').textContent = 'This browser only. Add a FIREBASE_URL to see other devices.';
+    return readLocal();
+  }
+
+  async function render(){
+    const list = (await getList()).sort((a,b) => b.score - a.score || a.time - b.time);
     $('sPlayers').textContent = list.length;
     $('sBest').textContent = list.length ? Math.max(...list.map(e => e.score)) : 0;
     $('sConv').textContent = list.filter(e => e.converted).length;
@@ -93,9 +110,13 @@
       body.appendChild(tr);
     });
   }
- 
-  $('clearBtn').onclick = () => {
-    if (confirm('Clear all saved scores?')){ try { localStorage.removeItem('loveyyScores'); } catch(e){} render(); }
+
+  $('clearBtn').onclick = async () => {
+    if (confirm('Clear all saved scores?')){
+      try { localStorage.removeItem('loveyyScores'); } catch(e){}
+      if (FIREBASE_URL){ try { await fetch(`${FIREBASE_URL}/scores.json`, { method: 'DELETE' }); } catch(e){} }
+      render();
+    }
   };
   try { new BroadcastChannel('loveyy-scores').onmessage = render; } catch(e){}
   setInterval(render, 2000);
