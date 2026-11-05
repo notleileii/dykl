@@ -24,6 +24,9 @@
   th{border-bottom:3px solid var(--ink); font-weight:800}
   tr.top td:first-child{font-size:1.2rem}
   .tag{display:inline-block; padding:2px 10px; border-radius:99px; border:2px solid var(--ink); font-size:.8rem; font-weight:800}
+  .tag.live{background:var(--pink); animation:blink 1.2s infinite}
+  @keyframes blink{50%{opacity:.55}}
+  @media (prefers-reduced-motion:reduce){.tag.live{animation:none}}
   .tag.yes{background:#c9f2dc} .tag.no{background:#eee}
   .empty{text-align:center; padding:26px 0; display:none}
   .actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px}
@@ -57,7 +60,7 @@
 <script>
   const $ = id => document.getElementById(id);
   const read = () => { try { return JSON.parse(localStorage.getItem('loveyyScores')) || []; } catch(e){ return []; } };
-
+ 
   function render(){
     const list = read().sort((a,b) => b.score - a.score || a.time - b.time);
     $('sPlayers').textContent = list.length;
@@ -80,8 +83,9 @@
         const td = document.createElement('td');
         if (j === 4){
           const t = document.createElement('span');
-          t.className = 'tag ' + (e.converted ? 'yes' : 'no');
-          t.textContent = e.converted ? 'Converted' : 'Not yet';
+          const playing = e.status === 'playing';
+          t.className = 'tag ' + (e.converted ? 'yes' : playing ? 'live' : 'no');
+          t.textContent = e.converted ? 'Converted' : playing ? `Playing · Q${e.current || 1}/${e.total}` : 'Finished';
           td.appendChild(t);
         } else td.textContent = v;
         tr.appendChild(td);
@@ -89,11 +93,12 @@
       body.appendChild(tr);
     });
   }
-
+ 
   $('clearBtn').onclick = () => {
     if (confirm('Clear all saved scores?')){ try { localStorage.removeItem('loveyyScores'); } catch(e){} render(); }
   };
-  try { new BroadcastChannel('loveyy').onmessage = render; } catch(e){}
+  try { new BroadcastChannel('loveyy-scores').onmessage = render; } catch(e){}
+  setInterval(render, 2000);
   window.addEventListener('storage', render);
   render();
 </script>
