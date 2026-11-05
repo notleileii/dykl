@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loveyy Cash Counter</title>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#161216; --milk:#fff8f6; --pink:#ff5c9d; --blush:#ffd6e6; --good:#1f9d63}
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+    font-family:'Nunito',system-ui,sans-serif; font-weight:600; color:var(--ink);
+    background:var(--milk); background-image:radial-gradient(var(--blush) 2px, transparent 2px); background-size:28px 28px;
+  }
+  .card{width:100%; max-width:440px; background:#fff; border:3px solid var(--ink); border-radius:28px; box-shadow:8px 8px 0 var(--ink); padding:28px 24px; text-align:center}
+  h1{font-family:'Bagel Fat One',sans-serif; font-weight:400; font-size:2rem; margin:0 0 6px}
+  .banner{display:none; background:var(--good); color:#fff; border:3px solid var(--ink); border-radius:14px; padding:8px 12px; margin:14px 0; font-weight:800}
+  .banner.show{display:block; animation:pop .3s}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  dl{margin:18px 0; display:grid; gap:10px; text-align:left}
+  .row{display:flex; justify-content:space-between; padding:12px 14px; border:2px solid var(--ink); border-radius:14px}
+  .row dt{font-weight:600} .row dd{margin:0; font-weight:800}
+  .cash{background:var(--blush)}
+  .cash dd{font-family:'Bagel Fat One',sans-serif; font-weight:400; font-size:1.6rem}
+  .rate{font-size:.9rem; opacity:.7; margin:0 0 16px}
+  .btn{font:inherit; font-weight:800; font-size:1rem; cursor:pointer; background:var(--pink); color:var(--ink); border:3px solid var(--ink); border-radius:999px; padding:10px 24px; box-shadow:4px 4px 0 var(--ink); text-decoration:none; display:inline-block}
+  .btn:active{transform:translate(3px,3px); box-shadow:1px 1px 0 var(--ink)}
+  .empty{display:none}
+</style>
+</head>
+<body>
+<main class="card">
+  <section id="got" class="empty">
+    <h1>Cash counter</h1>
+    <div class="banner" id="banner">New points received from the quiz! 💌</div>
+    <dl>
+      <div class="row"><dt>Correct answers</dt><dd id="correct"></dd></div>
+      <div class="row"><dt>Points</dt><dd id="pts"></dd></div>
+      <div class="row"><dt>Score</dt><dd id="score"></dd></div>
+      <div class="row cash"><dt>Cash</dt><dd id="cash"></dd></div>
+    </dl>
+    <p class="rate">Rate: 100 pts = $1.00 (change RATE in the code)</p>
+    <a class="btn" href="dykl.html">Play again</a>
+    <p style="margin:16px 0 0"><a href="scores.html" style="color:#161216">View all scores</a></p>
+  </section>
+  <section id="none" class="empty">
+    <h1>No points yet</h1>
+    <p>Finish the quiz and tap "Convert points to cash".</p>
+    <a class="btn" href="dykl.html">Go to quiz</a>
+  </section>
+</main>
+<script>
+  const RATE = 100; // points per $1
+  const $ = id => document.getElementById(id);
+
+  function render(d, fresh){
+    $('correct').textContent = `${d.correct} / ${d.total}`;
+    $('pts').textContent = d.pts;
+    $('score').textContent = d.score;
+    $('cash').textContent = '$' + (d.pts / RATE).toFixed(2);
+    $('none').style.display = 'none';
+    $('got').style.display = 'block';
+    if (fresh) $('banner').classList.add('show');
+  }
+
+  function load(){
+    const p = new URLSearchParams(location.search);
+    if (p.has('pts')){
+      render({ score:+p.get('score'), correct:+p.get('correct'), total:+p.get('total'), pts:+p.get('pts') }, true);
+      return;
+    }
+    try {
+      const saved = JSON.parse(localStorage.getItem('loveyyResult'));
+      if (saved){ render(saved, false); return; }
+    } catch(e){}
+    $('none').style.display = 'block';
+  }
+  load();
+
+  // If this page is already open in another tab, update live
+  try {
+    new BroadcastChannel('loveyy').onmessage = e => render(e.data, true);
+  } catch(e){}
+</script>
+</body>
+</html>

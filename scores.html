@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loveyy Scoreboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#161216; --milk:#fff8f6; --pink:#ff5c9d; --blush:#ffd6e6; --good:#1f9d63}
+  *{box-sizing:border-box}
+  body{margin:0; min-height:100vh; padding:20px; display:flex; justify-content:center; align-items:flex-start;
+    font-family:'Nunito',system-ui,sans-serif; font-weight:600; color:var(--ink);
+    background:var(--milk); background-image:radial-gradient(var(--blush) 2px, transparent 2px); background-size:28px 28px}
+  .card{width:100%; max-width:560px; background:#fff; border:3px solid var(--ink); border-radius:28px; box-shadow:8px 8px 0 var(--ink); padding:26px 20px; margin-top:20px}
+  h1{font-family:'Bagel Fat One',sans-serif; font-weight:400; font-size:2rem; margin:0 0 4px; text-align:center}
+  .sub{text-align:center; margin:0 0 18px; opacity:.75}
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px}
+  .stat{border:2px solid var(--ink); border-radius:14px; padding:10px; text-align:center; background:var(--blush)}
+  .stat b{display:block; font-family:'Bagel Fat One',sans-serif; font-weight:400; font-size:1.5rem}
+  .stat span{font-size:.8rem}
+  .wrap{overflow-x:auto}
+  table{width:100%; border-collapse:collapse; min-width:420px}
+  th,td{text-align:left; padding:10px 8px; border-bottom:2px solid #eee; white-space:nowrap}
+  th{border-bottom:3px solid var(--ink); font-weight:800}
+  tr.top td:first-child{font-size:1.2rem}
+  .tag{display:inline-block; padding:2px 10px; border-radius:99px; border:2px solid var(--ink); font-size:.8rem; font-weight:800}
+  .tag.yes{background:#c9f2dc} .tag.no{background:#eee}
+  .empty{text-align:center; padding:26px 0; display:none}
+  .actions{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:20px}
+  .btn{font:inherit; font-weight:800; cursor:pointer; background:var(--pink); color:var(--ink); border:3px solid var(--ink); border-radius:999px; padding:9px 22px; box-shadow:4px 4px 0 var(--ink); text-decoration:none; display:inline-block}
+  .btn.light{background:#fff}
+  .btn:active{transform:translate(3px,3px); box-shadow:1px 1px 0 var(--ink)}
+  .btn:focus-visible{outline:3px dashed var(--pink); outline-offset:3px}
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>Scoreboard</h1>
+  <p class="sub">Who answered the quiz</p>
+  <div class="stats">
+    <div class="stat"><b id="sPlayers">0</b><span>Players</span></div>
+    <div class="stat"><b id="sBest">0</b><span>Best score</span></div>
+    <div class="stat"><b id="sConv">0</b><span>Converted</span></div>
+  </div>
+  <div class="wrap">
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>Correct</th><th>Points</th><th>Status</th><th>When</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="empty" id="empty">No one has played yet. Send them the quiz!</p>
+  <div class="actions">
+    <a class="btn" href="dykl.html">Back to quiz</a>
+    <button class="btn light" id="clearBtn">Clear scores</button>
+  </div>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const read = () => { try { return JSON.parse(localStorage.getItem('loveyyScores')) || []; } catch(e){ return []; } };
+
+  function render(){
+    const list = read().sort((a,b) => b.score - a.score || a.time - b.time);
+    $('sPlayers').textContent = list.length;
+    $('sBest').textContent = list.length ? Math.max(...list.map(e => e.score)) : 0;
+    $('sConv').textContent = list.filter(e => e.converted).length;
+    $('empty').style.display = list.length ? 'none' : 'block';
+    const body = $('rows'); body.innerHTML = '';
+    list.forEach((e, i) => {
+      const tr = document.createElement('tr');
+      if (i === 0) tr.className = 'top';
+      const cells = [
+        i === 0 ? '👑' : i + 1,
+        e.name,
+        `${e.correct} / ${e.total}`,
+        e.score,
+        null,
+        new Date(e.time).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+      ];
+      cells.forEach((v, j) => {
+        const td = document.createElement('td');
+        if (j === 4){
+          const t = document.createElement('span');
+          t.className = 'tag ' + (e.converted ? 'yes' : 'no');
+          t.textContent = e.converted ? 'Converted' : 'Not yet';
+          td.appendChild(t);
+        } else td.textContent = v;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  $('clearBtn').onclick = () => {
+    if (confirm('Clear all saved scores?')){ try { localStorage.removeItem('loveyyScores'); } catch(e){} render(); }
+  };
+  try { new BroadcastChannel('loveyy').onmessage = render; } catch(e){}
+  window.addEventListener('storage', render);
+  render();
+</script>
+</body>
+</html>
