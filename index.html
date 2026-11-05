@@ -93,7 +93,7 @@
 </head>
 <body>
 <main class="card">
-
+ 
   <!-- Front page -->
   <section class="screen active hero" id="start">
     <div class="heart-big" aria-hidden="true">🖤</div>
@@ -102,7 +102,7 @@
     <input class="name" id="nameInput" type="text" maxlength="24" placeholder="Your name, loveyy" aria-label="Your name" autocomplete="off">
     <button class="btn" id="playBtn">Play</button>
   </section>
-
+ 
   <!-- Question page (one question per page) -->
   <section class="screen" id="quiz">
     <div class="top"><span id="qCount"></span><span id="liveScore"></span></div>
@@ -113,7 +113,7 @@
     <div class="msg" id="msg" role="status"></div>
     <div class="next" id="next"><button class="btn dark" id="nextBtn">Next</button></div>
   </section>
-
+ 
   <!-- Result page -->
   <section class="screen result" id="end">
     <h2>Your score</h2>
@@ -131,32 +131,35 @@
       <a class="btn dark" id="detailsLink" href="cash.html">See details</a>
     </div>
   </section>
-
+ 
 </main>
-
+ 
 <script>
   const POINTS_PER_CORRECT = 500;
   // A missed answer shows the "let it slide" message AND still earns the 500 pts.
   const POINTS_ON_SLIDE = true;
-
+ 
   const questions = [
     { q:"What's Leilei's favorite color?", options:["Black","White","Pink","Red"], answer:0 },
     { q:"Is Leilei genggeng?", options:["Yes","No"], answer:1 },
     { q:"Who is Leilei's first child?", clue:"Clue: black and white", options:["Charcoal","Mocha","Maple","Loki"], answer:1 },
     { q:"How Leilei call Fayy?", options:["Hi bai","Hellaw loveyyyy","Annyeong","Hoy"], answer:1 }
   ];
-
+ 
   let index = 0, score = 0, correctCount = 0, playerName = '', entryId = 0;
   const $ = id => document.getElementById(id);
   const show = id => {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
   };
-
-  $('playBtn').onclick = () => { playerName = $('nameInput').value.trim() || 'Anonymous loveyy'; index = 0; score = 0; correctCount = 0; show('quiz'); renderQuestion(); };
-
+ 
+  $('playBtn').onclick = () => { playerName = $('nameInput').value.trim() || 'Anonymous loveyy'; index = 0; score = 0; correctCount = 0; entryId = Date.now();
+    saveEntry({ id: entryId, name: playerName, score: 0, correct: 0, total: questions.length, current: 1, status: 'playing', converted: false, time: entryId });
+    show('quiz'); renderQuestion(); };
+ 
   function renderQuestion(){
     const item = questions[index];
+    updateEntry({ current: index + 1 });
     $('qCount').textContent = `Question ${index+1} of ${questions.length}`;
     $('liveScore').textContent = `${score} pts`;
     $('barFill').style.width = (index/questions.length*100) + '%';
@@ -174,7 +177,7 @@
       box.appendChild(b);
     });
   }
-
+ 
   function answer(choice){
     const item = questions[index];
     const buttons = [...document.querySelectorAll('.opt')];
@@ -196,28 +199,28 @@
       msg.innerHTML = `The actual answer is ${ans}, but since you are pretty as heck, I'll let it slide hehe 💕${earned}`;
     }
     $('liveScore').textContent = `${score} pts`;
+    updateEntry({ score, correct: correctCount });
     msg.classList.add('show');
     $('next').classList.add('show');
     $('nextBtn').focus();
   }
-
+ 
   $('nextBtn').onclick = () => {
     index++;
     if (index < questions.length) renderQuestion(); else finish();
   };
-
+ 
   function finish(){
     $('finalScore').textContent = score;
     $('finalCorrect').textContent = `${correctCount} of ${questions.length} correct`;
     $('finalNote').textContent = score === 2000
       ? "Perfect score! You really do know your loveyy 🖤"
       : "Nice try, loveyy. Still pretty as heck.";
-    entryId = Date.now();
-    saveEntry({ id: entryId, name: playerName, score, correct: correctCount, total: questions.length, converted: false, time: entryId });
+    updateEntry({ score, correct: correctCount, status: 'finished' });
     show('end');
     celebrate();
   }
-
+ 
   // Confetti + hearts (plain DOM particles)
   function burst(n, glyphs){
     const colors = ['#ff5c9d','#161216','#ffd6e6','#ffffff','#ffb703'];
@@ -245,18 +248,20 @@
     burst(90, ['💖','🖤','💕','💗']);
     setTimeout(() => burst(60, ['💖','💕']), 900);
   }
-
+ 
   function readScores(){
     try { return JSON.parse(localStorage.getItem('loveyyScores')) || []; } catch(e){ return []; }
   }
   function writeScores(list){
     try { localStorage.setItem('loveyyScores', JSON.stringify(list)); } catch(e){}
+    try { new BroadcastChannel('loveyy-scores').postMessage('update'); } catch(e){}
   }
   function saveEntry(entry){ const l = readScores(); l.push(entry); writeScores(l); }
-  function markConverted(){
-    writeScores(readScores().map(e => e.id === entryId ? { ...e, converted: true } : e));
+  function updateEntry(patch){
+    writeScores(readScores().map(e => e.id === entryId ? { ...e, ...patch } : e));
   }
-
+  function markConverted(){ updateEntry({ converted: true }); }
+ 
   // Pretend loading, then send results to cash.html
   $('cashBtn').onclick = () => {
     $('cashBtn').style.display = 'none';
@@ -271,7 +276,7 @@
       if (pct >= 100){ clearInterval(timer); setTimeout(sendPoints, 300); }
     }, 90);
   };
-
+ 
   function sendPoints(){
     markConverted();
     const payload = { name: playerName, score, correct: correctCount, total: questions.length, pts: score, time: Date.now() };
@@ -285,7 +290,7 @@
     burst(40, ['💖','💕']);
     countDown(score);
   }
-
+ 
   // Gradually drain the displayed score to 0 after converting
   function countDown(from){
     const el = $('finalScore');
